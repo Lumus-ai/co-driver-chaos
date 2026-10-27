@@ -338,9 +338,9 @@ export class Race {
     if (ai) {
       const aheadCurv = Math.abs(track.at(c.s + Math.max(30, c.speed * 1.4)).curv);
       const vTarget = Math.min(VMAX * c.aiSkill * (c.slowT > 0 ? 0.55 : 1), this.cornerSpeed(c.s + c.speed * 1.2) * c.aiSkill);
-      throttle = c.speed < vTarget ? 1 : 0;
-      brake = c.speed > vTarget + 4 ? 0.8 : 0;
-      const curv = track.at(c.s + 40).curv;
+      throttle = Math.max(0, Math.min(1, (vTarget - c.speed) / 3)); // proportional: full gas until 3 m/s under target, no on/off surging
+      brake = Math.max(0, Math.min(0.9, (c.speed - vTarget - 2) / 8 * 0.9)); // progressive pressure over an 8 m/s overspeed band (decel is now scaled by brake)
+      const curv = (track.at(c.s + 30).curv + track.at(c.s + 40).curv + track.at(c.s + 50).curv) / 3; // averaged lookahead: single-sample spikes made the car weave on straights
       let dTarget = -curv * 260; // cut apex
       // avoid slower car ahead
       for (const o of this.cars) {
@@ -351,15 +351,16 @@ export class Race {
       dTarget = Math.max(-5.4, Math.min(5.4, dTarget));
       for (const o of this.cars) { // follow: do not close on a car that is ahead in our lane before the dodge has opened a gap
         if (o === c || o.finished || o.inPit) continue; const ds = this.wrapS(o.s - c.s);
-        if (ds > 0 && ds < 8.5 && Math.abs(o.d - c.d) < 2.3 && c.speed > o.speed) { throttle = 0; brake = Math.max(brake, c.speed > o.speed + 1 ? 0.6 : 0); }
+        if (ds > 0 && ds < 8.5 && Math.abs(o.d - c.d) < 2.3 && c.speed > o.speed) { throttle = 0; brake = Math.max(brake, c.speed > o.speed + 1 ? 1 : 0); } // full pressure as before (was boolean-consumed)
       }
       steer = Math.max(-1, Math.min(1, (dTarget - c.d) * 0.5));
+      { const _pv = c._st || 0; c._st = Math.max(_pv - 5 * dt, Math.min(_pv + 5 * dt, steer)); steer = c._st; } // slew 5/s: smooth wheel, full lock still in 0.2s
       if (c.scaredT > 0) steer = Math.sin(this.time * 9 + c.wobblePhase) * 1.2;
       if (c.mirrorT > 0) steer = -steer;
       // AI occasionally pits when tires die
       if (c.tire < 12 && Math.random() < 0.3 * dt) c.wantsPit = true;
     } else if (input) {
-      if (c.scaredT > 0) { steer = 0; throttle = 0; brake = 0.35; }
+      if (c.scaredT > 0) { steer = 0; throttle = 0; brake = 1; } // full pressure as before (was boolean-consumed)
       else {
         steer = (input.right ? 1 : 0) - (input.left ? 1 : 0);
         if (c.mirrorT > 0) steer = -steer;
@@ -367,7 +368,7 @@ export class Race {
         brake = input.brake ? 1 : 0;
       }
     }
-    if (c.padBrake && c.wantsPit && !c.inPit && !c.pitLane && c.speed > 9) { throttle = 0; brake = Math.max(brake, 0.8); } // open a gap so the car ahead can take its stall
+    if (c.padBrake && c.wantsPit && !c.inPit && !c.pitLane && c.speed > 9) { throttle = 0; brake = Math.max(brake, 1); } // full pressure as before (was boolean-consumed) // open a gap so the car ahead can take its stall
 
     // speed model
     const nitroMul = c.nitroT > 0 ? 1.4 : 1;
@@ -381,8 +382,8 @@ export class Race {
     } else {
       c.yawExtra *= 0.85;
       if (c._bandHold && c.inPit) { throttle = 0; brake = 1; } // v45w band-hold must override AI throttle, else the car crawls into the wall
-      if (throttle) c.speed += ACCEL * nitroMul * engineMul * (1 - c.speed / (vmax + 1)) * dt;
-      if (brake) c.speed = Math.max(0, c.speed - BRAKE * dt); // braking must never reverse the car
+      if (throttle) c.speed += ACCEL * throttle * nitroMul * engineMul * (1 - c.speed / (vmax + 1)) * dt; // scaled by analog throttle
+      if (brake) c.speed = Math.max(0, c.speed - BRAKE * brake * dt); // braking must never reverse the car
       c.speed -= c.speed * 0.018 * dt; // drag
       c.speed = Math.min(c.speed, vmax);
     }

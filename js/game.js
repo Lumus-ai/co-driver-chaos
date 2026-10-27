@@ -247,6 +247,7 @@ export class Game {
         w.rotation.order = "YXZ"; w.rotation.x += wr;
         w.rotation.y = w.position.z > 0 ? (mesh.userData._steer || 0) : 0; // front wheels steer
       });
+      if (mesh.userData.parts.steer) mesh.userData.parts.steer.rotation.z = -(mesh.userData._steer || 0) * 2.2; // steering wheel follows the front wheels (sign pending capture verification)
       if (c.wheelT <= 0 && this.looseWheels.has(i)) this.reattachWheel(i);
       // nitro flame flicker
       const flame = this.nitroFlames.get(i);

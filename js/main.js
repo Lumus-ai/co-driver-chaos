@@ -36,6 +36,25 @@ class App {
     this.isHost = false; this.isGuest = false;
     this.autoCo = false;
     this.lastTs = 0;
+    this.paused = false;
+    // in-race pause menu (design approved by user 28.10): button left of the fullscreen button, overlay with continue/restart/exit
+    const mb = document.createElement("button"); mb.id = "raceMenuBtn"; mb.textContent = "☰ МЕНЮ";
+    mb.style.cssText = "position:fixed;top:14px;left:calc(50% - 132px);z-index:50;height:40px;padding:0 14px;font:bold 13px Arial;border-radius:10px;border:2px solid #f7c90f;background:rgba(18,18,24,.88);color:#ffd21f;cursor:pointer;display:none;touch-action:manipulation";
+    mb.onclick = () => this.showRaceMenu();
+    document.body.appendChild(mb); this.raceMenuBtn = mb;
+    const ov = document.createElement("div"); ov.id = "raceMenu";
+    ov.style.cssText = "position:fixed;inset:0;z-index:70;background:rgba(4,6,10,.45);display:none;align-items:center;justify-content:center";
+    const panel = "display:block;width:230px;margin:8px auto;padding:9px 14px;font-family:inherit;font-size:14px;font-weight:900;border-radius:10px;cursor:pointer";
+    ov.innerHTML = '<div style="background:rgba(10,12,18,.92);border:2px solid #f5c518;border-radius:12px;padding:14px 22px;text-align:center;font-family:Arial,sans-serif;max-height:92vh;overflow-y:auto">'
+      + '<div style="font-size:15px;color:#fff;letter-spacing:1px;margin:2px 0 10px;font-weight:900">ПАУЗА</div>'
+      + '<button data-rm="resume" style="' + panel + ';background:#f7c90f;color:#181818;border:3px solid #000">▶ ПРОДОЛЖИТЬ</button>'
+      + '<button data-rm="restart" style="' + panel + ';background:#2c2c3c;color:#fff;border:3px solid #555">↻ ЗАНОВО</button>'
+      + '<button data-rm="exit" style="' + panel + ';background:#2c2c3c;color:#fff;border:3px solid #555">В ГЛАВНОЕ МЕНЮ</button></div>';
+    ov.onclick = (e) => { const a = e.target.dataset && e.target.dataset.rm;
+      if (a === "resume") this.hideRaceMenu();
+      else if (a === "restart") { this.hideRaceMenu(); this.startLocal(this.autoCo ? "solo" : "hot"); }
+      else if (a === "exit") location.reload(); };
+    document.body.appendChild(ov); this.raceMenuEl = ov;
     this.bindKeys();
     this.showMainMenu();
   }
@@ -48,6 +67,7 @@ class App {
       if (["arrowup", "w"].includes(k)) this.keys.gas = v;
       if (["arrowdown", "s"].includes(k)) this.keys.brake = v;
       if (k === "p" && v && this.game && !this.isGuest) this.game.race.player.wantsPit = true;
+      if (k === "escape" && v && this.game && !this.isGuest && !this.isHost) this.toggleRaceMenu();
       if (["1", "2", "3"].includes(k) && v) this.playCard(parseInt(k) - 1);
       if (["arrowleft", "arrowright", "arrowup", "arrowdown", " "].includes(k)) e.preventDefault();
     };
@@ -108,10 +128,11 @@ class App {
   startLocal(kind) {
     Sound.resume();
     this.autoCo = kind === "solo";
-    this.game = new Game(document.getElementById("gl"), { laps: this.laps || 6, mode: this.prankMode || "coop", role: "driver" });
+    this.game = new Game(document.getElementById("gl"), { laps: this.laps || 6, mode: this.prankMode || "coop", role: "codriver" }); // AI drives locally; humans play cards -> co-driver HUD (named cards, no touch steering zones)
     this.game.race.player.ai = true; // AI drives; the player plays strategy (cards + pit calls)
     this.game.onCardPlay = (i) => this.playCard(i);
     this.hideMenu();
+    this.raceMenuBtn.style.display = "block";
     this.loopStart();
   }
 
@@ -329,7 +350,13 @@ class App {
     if (idx >= 0) { this.playCard(idx); this.autoT = 4 + Math.random() * 4; }
   }
 
+  showRaceMenu() { if (!this.game || this.isHost || this.isGuest) return; this.paused = true; Sound.setEngine(0, false); this.raceMenuEl.style.display = "flex"; }
+  hideRaceMenu() { this.paused = false; this.raceMenuEl.style.display = "none"; }
+  toggleRaceMenu() { this.paused ? this.hideRaceMenu() : this.showRaceMenu(); }
+
   loopStart() {
+    if (this._loopOn) return; // restart reuses the single rAF chain
+    this._loopOn = true;
     this.lastTs = performance.now();
     requestAnimationFrame((ts) => this.loop(ts));
   }
@@ -337,6 +364,7 @@ class App {
   loop(ts) {
     const dt = Math.min(0.05, (ts - this.lastTs) / 1000) || 0.016;
     this.lastTs = ts;
+    if (this.paused) { requestAnimationFrame((t) => this.loop(t)); return; } // pause menu open: freeze sim/cards/AI, keep the chain alive
     const race = this.game.race;
     // hand refill
     if (!this.isGuest && race.state !== "finished") {

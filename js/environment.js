@@ -19,8 +19,8 @@ export function buildEnvironment(scene, T) {
   // ---- hotel zone: low, long lattice shell over a podium (shape follows a studied photo reference), smaller twin
   // across the track, bridge over the track. Approximate placement near s=4560.
   const SH = 4560, hotel = new THREE.Group();
-  const glassM = new THREE.MeshLambertMaterial({ color: 0x6f9db8, emissive: 0x1d3a4d, flatShading: true, transparent: true, opacity: 0.86, side: THREE.DoubleSide });
-  const lineM = new THREE.LineBasicMaterial({ color: 0xcfe6f2 });
+  const glassM = new THREE.MeshLambertMaterial({ color: 0x2e5068, emissive: 0x0c1820, flatShading: true, transparent: true, opacity: 0.93, side: THREE.DoubleSide }); // dark slate canopy: reads as a shaded solid volume against the sky, lit core shows through
+  const lineM = new THREE.LineBasicMaterial({ color: 0x8fb2c8, transparent: true, opacity: 0.28 }); // faint ribs: form cue, never a white web
   const shellGeo = (hiEnd) => {
     const g = new THREE.SphereGeometry(1, 36, 10, 0, Math.PI * 2, 0, Math.PI / 2);
     const p = g.attributes.position;
@@ -44,7 +44,7 @@ export function buildEnvironment(scene, T) {
     g.position.x = x; return g;
   };
   hotel.add(mk(-46, 17, 30, 120, 1));
-  hotel.add(mk(52, 12, 16, 110, -1));
+  hotel.add(mk(52, 12, 16, 50, -1)); // A+ 100m full length (was 220m): track pierced both tips; approved by user 00:37 28.10
   const pod = box(34, 4, 140, 0xe8eaec); pod.position.set(-46, 2, 0); hotel.add(pod);
   const br = box(98, 4.5, 14, 0xe3e9ef); br.position.set(3, 17, 0); hotel.add(br);
   place(hotel, SH, 0, 0);

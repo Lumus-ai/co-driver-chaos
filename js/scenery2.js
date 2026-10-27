@@ -112,7 +112,18 @@ export function addScenery2(scene, track, ROAD_HALF) {
       const x = p.x + n.x * side * OFF, z = p.z + n.z * side * OFF;
       if (prev) u += Math.hypot(x - prev[0], z - prev[1]) / 6;
       pos.push(x, p.y, z, x, p.y + FH, z); uv.push(u, 0, u, 1);
-      if (prev) { idx.push(vi - 2, vi - 1, vi, vi, vi - 1, vi + 1); }
+      if (prev) {
+        // skip quads whose chord cuts the corner and lands on the asphalt: at corners
+        // tighter than the fence offset the offset polyline folds over the road and the
+        // stretched hatch renders as a giant white web across the track
+        const mx = (x + prev[0]) / 2, mz = (z + prev[1]) / 2;
+        let onRoad = false;
+        for (let ti = 0; ti < track.points.length && !onRoad; ti += 5) {
+          const q = track.points[ti], dx = mx - q.x, dz = mz - q.z;
+          if (dx * dx + dz * dz < (ROAD_HALF + 4) * (ROAD_HALF + 4)) onRoad = true;
+        }
+        if (!onRoad) idx.push(vi - 2, vi - 1, vi, vi, vi - 1, vi + 1);
+      }
       prev = [x, z]; vi += 2;
     }
     const geo = new THREE.BufferGeometry();
