@@ -1,0 +1,7 @@
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:#0b0b12;font-family:'Arial Black',Arial,Helvetica,sans-serif}
+#app{position:fixed;inset:0}
+#gl{position:absolute;inset:0;width:100%;height:100%;display:block}
+#hud,#menu,#overlay{position:absolute;inset:0;pointer-events:none}
+#menu{pointer-events:auto}
+.hidden{display:none!important}
