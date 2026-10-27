@@ -1,0 +1,8 @@
+Textures and sky from Poly Haven (https://polyhaven.com), licensed CC0 per https://polyhaven.com/license (the site's statement; not legal clearance).
+- asphalt_track (Dimitrios Savva): https://polyhaven.com/a/asphalt_track  -> asphalt_track_Diffuse/nor_gl/Rough.jpg (1k, unmodified)
+- grass_ground: https://polyhaven.com/a/grass_ground  -> grass_ground_Diffuse.jpg (1k, unmodified; tinted greener in code)
+- concrete_floor_worn_001 (Dimitrios Savva, Rico Cilliers): https://polyhaven.com/a/concrete_floor_worn_001 (downloaded, not yet used)
+- kloofendal_43d_clear_puresky (Greg Zaal): https://polyhaven.com/a/kloofendal_43d_clear_puresky -> sky_clear.jpg (2k HDR tone-mapped to JPEG by us, saturation boosted)
+Note: asphalt_track_Diffuse.jpg in this build is DERIVED: desaturated to 15% and brightened (source mean RGB 34/30/28 warm and very dark -> 81/79/79) so it reads as neutral grey asphalt. Original at polyhaven link above.
+
+ENGINE AUDIO (assets/audio/*.wav): cut from the 10 s Gemini-generated clip the user supplied himself and approved for use as the game's engine sound (video-c5c61b06.mp4). low = 0.1-1.3 s, mid = 4.6-5.95 s, high = 6.15-7.45 s of its audio, pitch-normalised (time-warped to constant pitch) and cross-faded into seamless loops. Not CC0 / not third-party-licensed: provenance is the user's own generation.
