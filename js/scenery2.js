@@ -223,6 +223,28 @@ export function addTrackDetail(scene, track, ROAD_HALF) {
     g.setIndex(idx);
     scene.add(new THREE.Mesh(g, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.75, metalness: 0, side: THREE.DoubleSide })));
   }
+  // Braking references are generated from this game's spline, not claimed surveyed signage.
+  // One shared pole material + instanced verge reflectors keep the scene light.
+  const board = (label, s, side) => {
+    const cv = document.createElement("canvas"); cv.width = 128; cv.height = 128;
+    const cx = cv.getContext("2d"); cx.fillStyle = "#f4f5f3"; cx.fillRect(0,0,128,128);
+    cx.fillStyle = "#18232c"; cx.fillRect(4,4,120,120); cx.fillStyle = "#fff";
+    cx.font = "bold 54px Arial"; cx.textAlign = "center"; cx.fillText(label,64,82);
+    const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
+    const {p,t,n} = track.at(s), group = new THREE.Group(); group.name = "braking_board_" + label;
+    const face = new THREE.Mesh(new THREE.BoxGeometry(1.5,1.5,.1),new THREE.MeshBasicMaterial({map:tex})); face.position.y=1.6;group.add(face);
+    const pole = new THREE.Mesh(new THREE.BoxGeometry(.09,.9,.09),new THREE.MeshLambertMaterial({color:0xbfc6ca}));pole.position.y=.5;group.add(pole);
+    group.position.copy(p).addScaledVector(n,side*(ROAD_HALF+2.5));group.rotation.y=Math.atan2(-t.x,-t.z);scene.add(group);
+  };
+  const corners=[];
+  for(let s=160;s<track.length-180;s+=8){const c=Math.abs(track.at(s).curv);if(c<.014)continue;
+    if(c>=Math.abs(track.at(s-16).curv)&&c>=Math.abs(track.at(s+16).curv)&&corners.every(q=>Math.abs(q-s)>180))corners.push(s);
+  }
+  for(const s of corners){const side=track.at(s).curv>0?-1:1;for(const d of [150,100,50])board(String(d),s-d,side);}
+  const reflectors=new THREE.InstancedMesh(new THREE.BoxGeometry(.12,.75,.12),new THREE.MeshLambertMaterial({color:0xdde9e6}),Math.floor(track.length/35)*2);
+  let ri=0; const dummy=new THREE.Object3D();
+  for(let s=0;s<track.length-35;s+=35)for(const side of [-1,1]){const {p,n}=track.at(s);dummy.position.copy(p).addScaledVector(n,side*(ROAD_HALF+1.9));dummy.position.y+=.4;dummy.updateMatrix();reflectors.setMatrixAt(ri++,dummy.matrix);}
+  reflectors.count=ri;reflectors.name="verge_reflectors";scene.add(reflectors);
   // rubbered racing line (darker band, slightly offset to follow the usual line)
   const pos = [], idx = [];
   for (let i = 0; i <= n; i++) {

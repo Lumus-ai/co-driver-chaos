@@ -174,6 +174,12 @@ const CSS = `
  .results table{font-size:12px;min-width:0}
  .results .btn{margin-top:10px;padding:8px 24px;font-size:15px}
 }
+.pitbtn{position:fixed;right:14px;bottom:145px;width:112px;height:52px;border-radius:12px;z-index:6;touch-action:manipulation;box-shadow:0 3px 10px #0008}
+.pit-label{font-size:11px}.pit-sub{font:11px Arial}.pitbtn.queued{background:#87db99}.pitbtn:disabled{opacity:1;color:#132718;cursor:default}
+@media(max-width:640px){.pitbtn{right:10px;bottom:280px;width:110px;height:52px}.dash .panel{min-width:0}.cd-tab{bottom:270px}.cards{bottom:104px}.card{box-sizing:border-box;width:86px;min-height:146px}.dash{padding-bottom:max(8px,env(safe-area-inset-bottom))}.lb{top:60px}.statusfx{bottom:338px;font-size:10px}}
+@media(max-height:480px) and (orientation:landscape){.pitbtn{right:10px;bottom:76px;width:112px;height:48px}.lb{top:52px}.lb .row{padding:0}.cd-tab{bottom:144px}.card{min-height:70px}.statusfx{top:52px}}
+@media(max-width:640px){.centermsg{white-space:normal;width:calc(100% - 32px);text-align:center;font-size:22px;line-height:1.2;top:34%}}
+@media(max-width:360px){.wx{top:14px;right:8px;padding:3px 6px;font-size:11px}.wx svg{width:14px;height:14px}#minimap{right:8px;width:88px;height:124px;top:62px}.lb{min-width:136px;left:8px}.countdown{top:40%;gap:12px}.countdown .l{width:38px;height:38px}#camBtn{left:calc(50% + 10px)!important;font-size:11px!important;padding:5px 8px!important}.fsbtn{left:calc(50% - 16px);width:30px}#raceMenuBtn{left:12px!important;padding:0 10px!important}}
 @media (pointer:coarse){ .hint{display:none} }
 `;
 
@@ -227,7 +233,7 @@ export class HUD {
       <div class="dash">
         <div class="panel"><span class="ic">${I.bolt}</span><div class="bar energy"><i></i></div><span class="barpct ep">43%</span></div>
         <div class="speedo"><span class="v">0</span><span class="u">КМ/Ч</span></div>
-        <div class="panel"><button class="pitbtn">${I.wrench}Pit</button><span class="ic">${I.tire}</span><div class="bar tire"><i></i></div><span class="barpct tp">86%</span></div>
+        <div class="panel"><button class="pitbtn" aria-label="Вызвать болид в боксы"><span class="pit-label">В БОКСЫ</span><span class="pit-sub">пит-стоп</span></button><span class="ic">${I.tire}</span><div class="bar tire"><i></i></div><span class="barpct tp">86%</span></div>
       </div>
       <button class="fsbtn" aria-label="Полный экран">⛶</button>
       <div class="centermsg"></div>
@@ -246,7 +252,7 @@ export class HUD {
     this.msgTimer = null;
     this.mm = this.root.querySelector("#minimap").getContext("2d");
     this.minimapBase = this.buildMinimapBase();
-    this.root.querySelector(".pitbtn").addEventListener("click", () => { game.race.player.wantsPit = true; });
+    this.root.querySelector(".pitbtn").addEventListener("click", () => { if (!game.race.player.wantsPit && !game.race.player.inPit && !game.race.player.pitLane) { game.race.player.wantsPit = true; HUD.centerMsg("Боксы вызваны. Заезд в конце круга", 2600); } });
     // fullscreen: only shown where the browser really supports it (not on iPhone Safari); user-gesture click, toggles in/out
     { const fb = this.root.querySelector(".fsbtn"), de = document.documentElement;
       const rq = de.requestFullscreen || de.webkitRequestFullscreen;
@@ -374,6 +380,12 @@ export class HUD {
     tb.style.width = p.tire + "%";
     tb.classList.toggle("low", p.tire < 25);
     this.root.querySelector(".tp").textContent = Math.round(p.tire) + "%";
+    const pit = this.root.querySelector(".pitbtn");
+    const pitState = p.inPit ? "service" : p.pitLane ? "exit" : p.wantsPit ? "queued" : "ready";
+    pit.classList.toggle("queued", pitState !== "ready");
+    pit.disabled = pitState !== "ready" || race.state === "finished";
+    pit.querySelector(".pit-label").textContent = {ready:"В БОКСЫ",queued:"БОКСЫ ВЫЗВАНЫ",service:"ПИТ-СТОП",exit:"ВЫЕЗД"}[pitState];
+    pit.querySelector(".pit-sub").textContent = {ready:"пит-стоп",queued:"в конце круга",service:"обслуживание",exit:"на трассу"}[pitState];
     // status fx list
     const fx = [];
     if (p.nitroT > 0) fx.push(`НИТРО ${p.nitroT.toFixed(1)}с`);

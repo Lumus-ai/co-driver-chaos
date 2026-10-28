@@ -341,19 +341,22 @@ export class Race {
       throttle = Math.max(0, Math.min(1, (vTarget - c.speed) / 3)); // proportional: full gas until 3 m/s under target, no on/off surging
       brake = Math.max(0, Math.min(0.9, (c.speed - vTarget - 2) / 8 * 0.9)); // progressive pressure over an 8 m/s overspeed band (decel is now scaled by brake)
       const curv = (track.at(c.s + 30).curv + track.at(c.s + 40).curv + track.at(c.s + 50).curv) / 3; // averaged lookahead: single-sample spikes made the car weave on straights
-      let dTarget = -curv * 260; // cut apex
+      let dTarget = -Math.sign(curv) * Math.max(0, Math.abs(curv) - 0.0008) * 160; // cut apex
       // avoid slower car ahead
       for (const o of this.cars) {
         if (o === c || o.finished) continue;
         const ds = this.wrapS(o.s - c.s);
-        if (ds > -6.2 && ds < 16 && Math.abs(o.d - c.d) < 2.6) dTarget = o.d > c.d ? Math.min(dTarget, o.d - 2.6) : Math.max(dTarget, o.d + 2.6); // also cars alongside (ds<0), keep >=2.6 m between centres
+        if (ds > -6.2 && ds < 16 && Math.abs(o.d - c.d) < 2.6) { if (c._passCar !== o || !(c._passUntil > this.time)) { c._passCar = o; c._passSide = o.d > c.d ? -1 : 1; c._passUntil = this.time + 1.5; } dTarget = c._passSide < 0 ? Math.min(dTarget, o.d - 2.6) : Math.max(dTarget, o.d + 2.6); } // also cars alongside (ds<0), keep >=2.6 m between centres
       }
       dTarget = Math.max(-5.4, Math.min(5.4, dTarget));
       for (const o of this.cars) { // follow: do not close on a car that is ahead in our lane before the dodge has opened a gap
         if (o === c || o.finished || o.inPit) continue; const ds = this.wrapS(o.s - c.s);
         if (ds > 0 && ds < 8.5 && Math.abs(o.d - c.d) < 2.3 && c.speed > o.speed) { throttle = 0; brake = Math.max(brake, c.speed > o.speed + 1 ? 1 : 0); } // full pressure as before (was boolean-consumed)
       }
-      steer = Math.max(-1, Math.min(1, (dTarget - c.d) * 0.5));
+      // Smooth the path target, not the car's physics position: no hidden mesh lag.
+      c._lineTarget = c._lineTarget === undefined ? c.d : c._lineTarget;
+      c._lineTarget += (dTarget - c._lineTarget) * (1 - Math.exp(-dt * 3));
+      steer = Math.max(-1, Math.min(1, (c._lineTarget - c.d) * 0.5));
       { const _pv = c._st || 0; c._st = Math.max(_pv - 5 * dt, Math.min(_pv + 5 * dt, steer)); steer = c._st; } // slew 5/s: smooth wheel, full lock still in 0.2s
       if (c.scaredT > 0) steer = Math.sin(this.time * 9 + c.wobblePhase) * 1.2;
       if (c.mirrorT > 0) steer = -steer;
@@ -380,7 +383,7 @@ export class Race {
       c.speed = Math.max(0, c.speed - 30 * dt);
       c.yawExtra += dt * 12;
     } else {
-      c.yawExtra *= 0.85;
+      c.yawExtra *= Math.exp(-9.75 * dt);
       if (c._bandHold && c.inPit) { throttle = 0; brake = 1; } // v45w band-hold must override AI throttle, else the car crawls into the wall
       if (throttle) c.speed += ACCEL * throttle * nitroMul * engineMul * (1 - c.speed / (vmax + 1)) * dt; // scaled by analog throttle
       if (brake) c.speed = Math.max(0, c.speed - BRAKE * brake * dt); // braking must never reverse the car

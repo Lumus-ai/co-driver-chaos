@@ -608,6 +608,24 @@ export function buildCar(mainColor, accentColor, number, liv) {
     }
     if (/^steering_wheel/.test(o.name)) parts.steer = o;
   });
+  if (parts.steer) {
+    for (const sourceName of ["details", "body"]) {
+      const detail = root.getObjectByName(sourceName);
+      if (!detail) continue;
+      const geo = detail.geometry, pos = geo.attributes.position;
+      const index = geo.index || { count: pos.count, getX: i => i };
+      const stay = [], moving = [];
+      for (let i = 0; i < index.count; i += 3) {
+        const tri = [index.getX(i), index.getX(i + 1), index.getX(i + 2)];
+        const inside = tri.every(v => Math.abs(pos.getX(v)) < 0.151 && pos.getY(v) > 0.54 && pos.getY(v) < 0.722 && pos.getZ(v) > 0.701 && pos.getZ(v) < 0.795);
+        (inside ? moving : stay).push(...tri);
+      }
+      const buttons = geo.clone(); buttons.setIndex(moving);
+      buttons.translate(-parts.steer.position.x, -parts.steer.position.y, -parts.steer.position.z);
+      const assembly = new THREE.Mesh(buttons, detail.material); assembly.name = "steering_" + sourceName;
+      parts.steer.add(assembly); detail.geometry = geo.clone(); detail.geometry.setIndex(stay);
+    }
+  }
   // one pivot per wheel so tyre and rim spin and steer together
   for (const k in wmap) {
     const pv = new THREE.Group(); pv.name = k; pv.position.copy(wmap[k][0].position);

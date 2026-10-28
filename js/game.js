@@ -46,7 +46,7 @@ export class Game {
     this.smokeMeshes = [];
     this.sparks = [];
     this.nitroFlames = new Map();
-    this.shake = 0;
+    this.shake = 0; this._headQ = null;
     this.camPos = new THREE.Vector3(); this.camLook = new THREE.Vector3();
     this.firstFrame = true;
     this.skyStates = {
@@ -185,7 +185,7 @@ export class Game {
     this.sparks.forEach(s => this.scene.remove(s)); this.sparks = [];
     for (const [, f] of this.nitroFlames) f.visible = false;
     this.pendingGuestEvents = [];
-    this.shake = 0;
+    this.shake = 0; this._headQ = null;
     if (this.hud) this.hud.resetResults();
   }
 
@@ -196,7 +196,9 @@ export class Game {
       events = this.pendingGuestEvents || [];
       this.pendingGuestEvents = [];
     } else {
-      race.update(dt, input);
+      // Bounded substeps keep steering/braking stable across 30/60/120Hz rendering.
+      const steps = Math.max(1, Math.ceil(dt / (1 / 120)));
+      for (let step = 0; step < steps; step++) race.update(dt / steps, input);
       events = race.drainEvents();
       if (this.netForward) this.netForward.push(...events);
     }
@@ -213,7 +215,7 @@ export class Game {
       // motion polish (visual only): body heads into its lateral motion, leans in corners, pitches on brake/accel
       const vis = c._vis || (c._vis = { d: c.d, sp: c.speed, base: baseYaw, lat: 0, acc: 0, yr: 0 });
       if (dt > 0) {
-        const k = Math.min(1, dt * 8);
+        const k = 1 - Math.exp(-dt * 8);
         let dB = baseYaw - vis.base; if (dB > Math.PI) dB -= 2 * Math.PI; if (dB < -Math.PI) dB += 2 * Math.PI;
         vis.lat += (Math.max(-12, Math.min(12, (c.d - vis.d) / dt)) - vis.lat) * k;
         vis.acc += (Math.max(-60, Math.min(60, (c.speed - vis.sp) / dt)) - vis.acc) * k;
@@ -408,8 +410,13 @@ export class Game {
     if (this.camMode === "cockpit") {
       pm.updateMatrixWorld(true);
       const speedK0 = pc.speed / 78;
-      this.camera.position.copy(pm.localToWorld(new THREE.Vector3(0, CP[0], CP[1])));
-      this.camera.lookAt(pm.localToWorld(new THREE.Vector3(0, CP[0] - 0.4, 18)));
+      // Stabilized head: retain the car position, but reject suspension pitch/roll
+      // and smooth heading corrections instead of copying every body twitch.
+      const heading = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), pm.rotation.y);
+      if (!this._headQ || this.firstFrame) { this._headQ = heading.clone(); this.firstFrame = false; }
+      this._headQ.slerp(heading, 1 - Math.exp(-dt * 10));
+      this.camera.position.copy(new THREE.Vector3(0, CP[0], CP[1]).applyQuaternion(this._headQ).add(pm.position));
+      this.camera.lookAt(new THREE.Vector3(0, CP[0] - 0.4, 18).applyQuaternion(this._headQ).add(pm.position));
       const tf = 80 + speedK0 * 10 + (pc.nitroT > 0 ? 8 : 0);
       this.camera.fov += (tf - this.camera.fov) * dt * 3; this.camera.updateProjectionMatrix();
       Sound.setEngine(pc.speed * 3.6, this.track.isOffRoad(pc.s, pc.d)); this.hud.update(dt); this.renderer.render(this.scene, this.camera); return;
