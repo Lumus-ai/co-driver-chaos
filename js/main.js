@@ -26,10 +26,41 @@ const MENU_CSS = `
 #menu .small{font-family:Arial;font-size:12px;color:#778;margin-top:16px;line-height:1.5}
 `;
 
+const MAIN_MENU_CSS = `  #menu .box{text-align:center;max-width:400px;width:100%;padding:20px 16px}
+  #menu h1{font-size:44px;color:#ffd21f;text-shadow:0 4px 0 #b3541e,0 8px 24px #000;margin:0 0 4px;line-height:1.05}
+  #menu .tag{font-family:Arial;font-size:14px;color:#8fd0a0;margin:0 0 20px}
+  #menu .play{display:block;width:100%;padding:18px;font-family:inherit;font-size:22px;font-weight:900;
+    background:#f7c90f;color:#181818;border:3px solid #000;border-radius:14px;cursor:pointer;
+    box-shadow:0 6px 0 #8a6d00,0 10px 22px rgba(0,0,0,.55)}
+  #menu .play:active{transform:scale(.97)}
+  #menu .play .sub{display:block;font-family:Arial;font-weight:700;font-size:12px;color:#5c4a00;margin-top:3px}
+  #menu .lbl{font-family:Arial;font-size:12px;color:#9aa;margin:18px 0 6px;letter-spacing:1px}
+  #menu .row{display:flex;gap:10px;justify-content:center}
+  #menu .seg{flex:1;max-width:110px;padding:11px 0;border-radius:10px;border:2px solid #555;background:#22222e;
+    color:#ddd;font-family:inherit;font-weight:900;font-size:16px;cursor:pointer}
+  #menu .seg.sel{background:#3fae4a;border-color:#2c7a34;color:#fff}
+  #menu .arsenal{display:flex;gap:8px;justify-content:center;margin-top:6px}
+  #menu .card{flex:1;background:#1b1b28;border:2px solid #33334a;border-radius:10px;padding:8px 2px 7px;max-width:86px}
+  #menu .card .ic{font-size:22px}
+  #menu .card .nm{font-family:Arial;font-size:10px;font-weight:700;color:#cfd2e0;margin-top:3px}
+  #menu .card .cs{font-family:Arial;font-size:10px;color:#ffd21f}
+  #menu .howto{font-family:Arial;font-size:11.5px;color:#778;margin-top:16px;line-height:1.55}
+  #menu .hot{margin-top:14px;font-family:Arial;font-size:12px;color:#8a8fa8;background:none;border:1px dashed #444;
+    border-radius:8px;padding:8px 12px;cursor:pointer}
+
+#menu{overflow-y:auto;align-items:safe center}
+#menu .box{box-sizing:border-box;margin:auto;max-width:432px;flex-shrink:0}
+#menu h1{margin:0 0 4px}
+#menu .row{margin:0}
+#menu .lbl{margin:18px 0 6px}
+#menu .arsenal .card{min-width:0}
+@media(max-height:520px){#menu .box{padding-top:18px;padding-bottom:18px}}
+`;
+
 class App {
   constructor() {
     this.menuEl = document.getElementById("menu");
-    const style = document.createElement("style"); style.textContent = MENU_CSS; document.head.appendChild(style);
+    const style = document.createElement("style"); style.textContent = MENU_CSS + MAIN_MENU_CSS; document.head.appendChild(style);
     this.keys = { left: false, right: false, gas: false, brake: false };
     this.game = null;
     this.net = null;
@@ -98,31 +129,27 @@ class App {
 
   showMainMenu() {
     this.menu(`
-      <h1>CO-DRIVER<br>CHAOS</h1>
-      <h2>один рулит — второй пакостит</h2>
-      <div class="lbl">РЕЖИМ КАРТ</div>
-      <div class="row">
-        <button class="opt ${this.prankMode !== "hostile" ? "sel" : ""}" data-m="coop">😈 СВОЕМУ ВОДИТЕЛЮ</button>
-        <button class="opt ${this.prankMode === "hostile" ? "sel" : ""}" data-m="hostile">💣 СОПЕРНИКАМ</button>
-      </div>
-      <div class="lbl">КРУГИ</div>
-      <div class="row">
-        <button class="opt ${this.laps !== 3 ? "" : "sel"}" data-l="3">3</button>
-        <button class="opt ${!this.laps || this.laps === 6 ? "sel" : ""}" data-l="6">6</button>
-      </div>
-      <div style="height:14px"></div>
-      <button class="mbtn" data-a="solo">🏎 СОЛО + АВТО-НАПАРНИК</button>
-      <button class="mbtn" data-a="hot">🐵 ВДВОЁМ НА ОДНОЙ КЛАВИАТУРЕ</button>
-      <button class="mbtn alt" data-a="host">🌐 СОЗДАТЬ СЕТЕВУЮ ГОНКУ</button>
-      <button class="mbtn alt" data-a="join">🔗 ПОДКЛЮЧИТЬСЯ ПО КОДУ</button>
-      <div class="small">Болид ведёт ИИ - ты играешь стратегию: 1/2/3 или клик по картам, P — вызов в боксы.<br>Энергия ⚡ копится сама и за обгоны.</div>
+<h1>CO-DRIVER<br>CHAOS</h1>
+  <div class="tag">Болид ведёт ИИ - побеждает твоя стратегия</div>
+  <button class="play" data-a="solo">ИГРАТЬ<span class="sub">соло гонка + авто-напарник</span></button>
+  <div class="lbl">КРУГИ</div>
+  <div class="row">
+    <button class="seg ${this.laps === 3 ? "sel" : ""}" data-l="3" aria-pressed="${this.laps === 3}">3</button>
+    <button class="seg ${!this.laps || this.laps === 6 ? "sel" : ""}" data-l="6" aria-pressed="${!this.laps || this.laps === 6}">6</button>
+  </div>
+  <div class="lbl">ТВОЙ АРСЕНАЛ</div>
+  <div class="arsenal">
+    <div class="card"><div class="ic"><svg viewBox="0 0 24 24" width="30" height="30"><path d="M12 2 c1 4-5 6-5 12 a5 5 0 0 0 10 0 c0-2-1-3.5-2-4.5 0 2-1 3-2 3 .5-3-1-7-1-10.5 z" fill="#ff7d1f" stroke="#b34300" stroke-width="1"/><path d="M12 12 c.4 1.6-1.5 2.2-1.5 4 a1.5 1.5 0 0 0 3 0 c0-1-.5-1.4-1-1.8 0 .8-.4 1.2-.5 1.2 .2-1.2 0-2.4 0-3.4z" fill="#ffd21f"/></svg></div><div class="nm">НИТРО</div><div class="cs"><svg viewBox="0 0 24 24" width="12" height="12" style="vertical-align:-1px"><path d="M13 2 L4 14 h6 l-2 8 L20 9 h-6 z" fill="#ffd21f" stroke="#7a5b00" stroke-width="1"/></svg>30</div></div>
+    <div class="card"><div class="ic"><svg viewBox="0 0 24 24" width="28" height="28"><path d="M21 6.5 a5.5 5.5 0 0 1-7.3 5.2 L7 18.4 a2.1 2.1 0 0 1-3-3 l6.7-6.7 A5.5 5.5 0 0 1 17.5 3 l-3 3 2.5 2.5 3-3 z" fill="#c8ccd8"/></svg></div><div class="nm">РЕМОНТ</div><div class="cs"><svg viewBox="0 0 24 24" width="12" height="12" style="vertical-align:-1px"><path d="M13 2 L4 14 h6 l-2 8 L20 9 h-6 z" fill="#ffd21f" stroke="#7a5b00" stroke-width="1"/></svg>30</div></div>
+    <div class="card"><div class="ic"><svg viewBox="0 0 24 24" width="30" height="30"><path d="M3 16 c4-1 6-6 9-6 s5 5 9 6 c-3 1-5 3-9 3 s-6-2-9-3z" fill="#7ec8ff" stroke="#2a6a9e" stroke-width="1"/><path d="M3 9 c4-1 6-5 9-5 s5 4 9 5" fill="none" stroke="#7ec8ff" stroke-width="2"/></svg></div><div class="nm">АЭРО</div><div class="cs"><svg viewBox="0 0 24 24" width="12" height="12" style="vertical-align:-1px"><path d="M13 2 L4 14 h6 l-2 8 L20 9 h-6 z" fill="#ffd21f" stroke="#7a5b00" stroke-width="1"/></svg>30</div></div>
+    <div class="card"><div class="ic"><svg viewBox="0 0 24 24" width="28" height="28"><path d="M12 2 L23 21 H1 z" fill="#e8b62a" stroke="#7a5b00" stroke-width="1.4"/><path d="M12 8 v6" stroke="#181818" stroke-width="2.4"/><circle cx="12" cy="17.5" r="1.4" fill="#181818"/></svg></div><div class="nm">ТУРБО-РИСК</div><div class="cs"><svg viewBox="0 0 24 24" width="12" height="12" style="vertical-align:-1px"><path d="M13 2 L4 14 h6 l-2 8 L20 9 h-6 z" fill="#ffd21f" stroke="#7a5b00" stroke-width="1"/></svg>0</div></div>
+  </div>
+  <div class="howto">Карты: тап или клавиши 1/2/3 · P - вызов в боксы<br>Энергия <svg viewBox="0 0 24 24" width="12" height="12" style="vertical-align:-1px"><path d="M13 2 L4 14 h6 l-2 8 L20 9 h-6 z" fill="#ffd21f" stroke="#7a5b00" stroke-width="1"/></svg> копится сама и за обгоны болида</div>
+  <button class="hot" data-a="hot"><svg viewBox="0 0 24 24" width="16" height="16" style="vertical-align:-2px"><circle cx="4.5" cy="9" r="2.6" fill="#8a4b21"/><circle cx="19.5" cy="9" r="2.6" fill="#8a4b21"/><circle cx="12" cy="12" r="8.5" fill="#8a4b21"/><ellipse cx="12" cy="14" rx="6" ry="5" fill="#e8b07a"/><circle cx="8.8" cy="10.5" r="2.1" fill="#fff"/><circle cx="15.2" cy="10.5" r="2.1" fill="#fff"/><circle cx="9.2" cy="10.8" r=".9" fill="#1a1a1a"/><circle cx="14.8" cy="10.8" r=".9" fill="#1a1a1a"/><ellipse cx="12" cy="16.5" rx="3" ry="2.4" fill="#4a1414"/></svg> вдвоём на одной клавиатуре (только ПК)</button>
     `);
-    this.menuEl.querySelectorAll("[data-m]").forEach(b => b.onclick = () => { this.prankMode = b.dataset.m; this.showMainMenu(); });
     this.menuEl.querySelectorAll("[data-l]").forEach(b => b.onclick = () => { this.laps = parseInt(b.dataset.l); this.showMainMenu(); });
     this.menuEl.querySelector('[data-a="solo"]').onclick = () => this.startLocal("solo");
     this.menuEl.querySelector('[data-a="hot"]').onclick = () => this.startLocal("hot");
-    this.menuEl.querySelector('[data-a="host"]').onclick = () => this.hostGame();
-    this.menuEl.querySelector('[data-a="join"]').onclick = () => this.joinMenu();
   }
 
   startLocal(kind) {
